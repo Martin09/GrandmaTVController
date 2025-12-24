@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from aiohttp.client_exceptions import WSMessageTypeError
 from telegram import BotCommand, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
@@ -134,6 +135,9 @@ class TelegramBotService:
             controller = TVController(config)
             await controller.run_sequence()
             return f"Action '{action_name}' completed successfully!"
+        except WSMessageTypeError:
+            logger.warning(f"TV appears to be off - WSMessageTypeError during '{action_name}'")
+            return "TV appears to be off or unreachable. Please turn it on and try again."
         except Exception as e:
             logger.exception(f"Error executing action '{action_name}'")
             return f"Error executing '{action_name}': {e}"
