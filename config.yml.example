@@ -1,0 +1,8 @@
+# Example configuration for Grandma's TV Controller
+# Copy this file to `config.yml` and update values for your TV.
+
+ip: 192.168.178.50
+mac: "12:34:56:78:90:AB"
+
+# Optional: path for the pairing key file (defaults to tv_key_store.json)
+key_file: tv_key_store.json
