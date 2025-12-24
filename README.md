@@ -36,6 +36,19 @@ uv run main.py --action channel_1
 
 Available actions: `channel_1`, `channel_2` (see `main.py` for details).
 
+### Telegram Bot Mode
+
+Run as a Telegram bot for remote control:
+
+```sh
+uv run main.py --bot
+```
+
+1. Create a bot via [@BotFather](https://t.me/BotFather) and copy the token
+2. Add your bot token to `config.yml` under `telegram.bot_token`
+3. Message your bot, it will log unauthorized chat IDs for you to add
+4. Add authorized chat IDs to `telegram.allowed_chat_ids` in `config.yml`
+
 ## Notes
 
 - During your first run you will need to approve access on your TV.

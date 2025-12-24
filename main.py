@@ -149,14 +149,10 @@ class TVController:
 # --- Main Entry Point ---
 
 
-async def main():
-    parser = argparse.ArgumentParser(description="Grandma's TV Controller")
-    parser.add_argument("--action", type=str, default="channel_1", help=f"Choose action: {', '.join(ACTIONS.keys())}")
-    args = parser.parse_args()
-
-    sequence = ACTIONS.get(args.action)
+async def main(action: str):
+    sequence = ACTIONS.get(action)
     if not sequence:
-        print(f"Error: Action '{args.action}' not found.")
+        print(f"Error: Action '{action}' not found.")
         print(f"Available actions: {', '.join(ACTIONS.keys())}")
         sys.exit(1)
 
@@ -187,8 +183,30 @@ async def main():
     await controller.run_sequence()
 
 
-if __name__ == "__main__":
+def run_bot() -> None:
+    """Run the Telegram bot (manages its own event loop)."""
+    from telegram_bot import TelegramBotService, load_config
+
     try:
-        asyncio.run(main())
+        cfg_data, telegram_config = load_config()
+    except (FileNotFoundError, ValueError) as e:
+        logger.error(str(e))
+        sys.exit(1)
+
+    bot = TelegramBotService(cfg_data, telegram_config)
+    bot.run()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Grandma's TV Controller")
+    parser.add_argument("--action", type=str, default="channel_1", help=f"Choose action: {', '.join(ACTIONS.keys())}")
+    parser.add_argument("--bot", action="store_true", help="Run as Telegram bot")
+    args = parser.parse_args()
+
+    try:
+        if args.bot:
+            run_bot()
+        else:
+            asyncio.run(main(args.action))
     except KeyboardInterrupt:
         pass

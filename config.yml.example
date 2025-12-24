@@ -6,3 +6,8 @@ mac: "12:34:56:78:90:AB"
 
 # Client key for pairing (will be automatically updated after first run)
 client_key: null
+
+# Telegram Bot Configuration
+telegram:
+  bot_token: "YOUR_BOT_TOKEN_HERE"
+  allowed_chat_ids: []  # List of allowed chat IDs; unauthorized requests are logged
