@@ -19,6 +19,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("GrandmaTV")
 
+# Suppress noisy httpx logs (Telegram API polling)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 # --- Action Definitions ---
 
 # We define two types of actions for our macros:
