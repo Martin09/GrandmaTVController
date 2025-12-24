@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import json
 import logging
 import sys
 from dataclasses import dataclass, field
@@ -58,7 +57,8 @@ ACTIONS: dict[str, list[ActionStep]] = {
 class TVConfig:
     ip: str
     mac: str
-    key_file: Path = Path("tv_key_store.json")
+    client_key: str | None = None
+    config_file: Path = Path("config.yml")
     sequence: list[ActionStep] = field(default_factory=list)
 
 
@@ -86,23 +86,23 @@ class TVController:
 
     def __init__(self, config: TVConfig):
         self.config = config
-        self.client_key: str | None = self._load_key()
+        self.client_key: str | None = config.client_key
         # Initialize client with the key (if we have one)
         self.client = WebOsClient(config.ip, client_key=self.client_key)
 
-    def _load_key(self) -> str | None:
-        if self.config.key_file.exists():
-            try:
-                data = json.loads(self.config.key_file.read_text())
-                return data.get("client_key")
-            except json.JSONDecodeError:
-                logger.warning("Key file corrupted. Re-pairing will be required.")
-        return None
-
     def _save_key(self, key: str):
-        data = {"client_key": key}
-        self.config.key_file.write_text(json.dumps(data, indent=2))
-        logger.info(f"Pairing key saved to {self.config.key_file}")
+        self.config.client_key = key
+        # Read existing yaml to preserve other fields, then update key
+        if self.config.config_file.exists():
+            data = yaml.safe_load(self.config.config_file.read_text()) or {}
+        else:
+            data = {}
+
+        data["client_key"] = key
+
+        # Note: This will overwrite comments in the file
+        self.config.config_file.write_text(yaml.dump(data, default_flow_style=False))
+        logger.info(f"Pairing key saved to {self.config.config_file}")
 
     async def connect(self):
         """Connects to TV. Handles pairing if key is missing."""
@@ -173,12 +173,11 @@ async def main():
             logger.error("No configuration file found (config.yml or config.yml.example). Exiting.")
             sys.exit(1)
 
-    ip = cfg_data.get("ip")
-    mac = cfg_data.get("mac")
-    key_file_val = cfg_data.get("key_file")
-    key_file = Path(key_file_val) if key_file_val else Path("tv_key_store.json")
+    ip = cfg_data.get("ip") or ""
+    mac = cfg_data.get("mac") or ""
+    client_key = cfg_data.get("client_key")
 
-    config = TVConfig(ip=ip, mac=mac, key_file=key_file, sequence=sequence)
+    config = TVConfig(ip=ip, mac=mac, client_key=client_key, sequence=sequence)
 
     # # 1. Wake TV
     # await WakeOnLanService.wake_device(config.mac, config.ip) # FIXME: Not working

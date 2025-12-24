@@ -39,7 +39,7 @@ Available actions: `channel_1`, `channel_2` (see `main.py` for details).
 ## Notes
 
 - During your first run you will need to approve access on your TV.
-- Your pairing key is stored in `tv_key_store.json` after first run.
+- Your pairing key is stored in `config.yml` after first run.
 - `config.yml` is ignored by git; commit only the example config.
 
 ## License
