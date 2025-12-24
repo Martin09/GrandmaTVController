@@ -1,4 +1,4 @@
-# LGCtrl
+# GrandmaTVController
 
 A simple Python tool to automate LG WebOS TV actions (app launches, remote button presses) via macros. Designed for easy use by non-technical users.
 
