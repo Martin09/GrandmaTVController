@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 
 import jinja2
 from aiohttp import web
@@ -10,6 +11,23 @@ logger = logging.getLogger("GrandmaTV.Web")
 
 # Lock to prevent concurrent TV commands - only one action at a time
 _action_lock = asyncio.Lock()
+
+
+def _silence_connection_reset_errors(loop: asyncio.AbstractEventLoop, context: dict):
+    """
+    Custom exception handler to suppress harmless Windows proactor errors.
+
+    On Windows, when a remote host closes a connection abruptly, asyncio's
+    proactor event loop raises ConnectionResetError during socket shutdown.
+    These are harmless and just noise in the logs.
+    """
+    exception = context.get("exception")
+    if isinstance(exception, ConnectionResetError):
+        # Silently ignore - these are expected when the TV closes connections
+        return
+    # For all other exceptions, use the default handler
+    loop.default_exception_handler(context)
+
 
 # HTML Template
 INDEX_TEMPLATE = """
@@ -196,6 +214,13 @@ def create_app() -> web.Application:
 
 def run_web_server():
     logging.basicConfig(level=logging.INFO)
+
+    # Suppress harmless Windows proactor errors (ConnectionResetError)
+    if sys.platform == "win32":
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.set_exception_handler(_silence_connection_reset_errors)
+
     app = create_app()
 
     # Read config again or get from app
