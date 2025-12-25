@@ -172,7 +172,10 @@ class TVController:
         logger.info("Sequence complete.")
 
         if self.client.is_connected():
-            await self.client.disconnect()
+            try:
+                await self.client.disconnect()
+            except ConnectionResetError:
+                pass  # TV may forcibly close the connection (benign)
             logger.info("Disconnected.")
 
     async def turn_off(self):
