@@ -175,18 +175,36 @@ class TVController:
             await self.client.disconnect()
             logger.info("Disconnected.")
 
+    async def turn_off(self):
+        """Turns off the TV."""
+        await self.connect()
+        logger.info("Turning off TV...")
+        await self.client.power_off()
+
     @classmethod
     async def execute_action_with_retry(cls, action_name: str, config_data: dict[str, Any]) -> str:
         """
         Executes an action by name with auto-retry on Wake-on-LAN.
         Returns a status message on success or raises an exception on final failure.
         """
-        if action_name not in ACTIONS:
-            raise ValueError(f"Unknown action: {action_name}")
-
         ip = config_data.get("ip", "")
         mac = config_data.get("mac", "")
         client_key = config_data.get("client_key")
+
+        if action_name == "turn_off":
+            try:
+                controller = cls(TVConfig(ip=ip, mac=mac, client_key=client_key))
+                await controller.turn_off()
+                return "TV turned off."
+            except Exception as e:
+                raise e
+
+        if action_name == "turn_on":
+            await WakeOnLanService.wake_device(mac, ip)
+            return "TV Wake-on-LAN sent."
+
+        if action_name not in ACTIONS:
+            raise ValueError(f"Unknown action: {action_name}")
 
         sequence = ACTIONS[action_name]
         config = TVConfig(ip=ip, mac=mac, client_key=client_key, sequence=sequence)

@@ -67,7 +67,7 @@ uv run main.py --bot
 3. Message your bot, it will log unauthorized chat IDs for you to add
 4. Add authorized chat IDs to `telegram.allowed_chat_ids` in `config.yml`
 
-Bot commands: `/wake`, `/channel_1`, `/channel_2`, etc.
+Bot commands: `/turn_on`, `/turn_off`, `/channel_1`, `/channel_2`, etc.
 
 ### Web Interface Mode
 
@@ -80,6 +80,20 @@ uv run main.py --web
 - Accessible at `http://localhost:8080`.
 - Buttons are configured in `config.yml` under the `web` section.
 - You can customize labels, actions, and colors (e.g., `#E63946`).
+- Use action `turn_off` to create a "Turn Off" button.
+
+### Turn Off the TV
+
+You can turn off the TV via:
+
+1. **CLI**: `uv run main.py --off`
+2. **Telegram**: Send `/turn_off`
+3. **Web**: Add a button with action `turn_off` in `config.yml`
+
+### Wake Up the TV
+
+Similar to turning off, you can add a "Wake Up" button to the web interface by using the action `turn_on`.
+On Telegram, use `/turn_on`.
 
 ## Notes
 

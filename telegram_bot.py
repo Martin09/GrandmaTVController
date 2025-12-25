@@ -12,7 +12,7 @@ from telegram import BotCommand, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # Import from core module
-from core import ACTIONS, TVController, WakeOnLanService
+from core import ACTIONS, TVController
 from core import load_config as load_core_config
 
 logger = logging.getLogger("GrandmaTV.TelegramBot")
@@ -111,45 +111,13 @@ class TelegramBotService:
             )
             return
 
-        action_list = "\\n".join(f"/{action}" for action in ACTIONS.keys())
+        action_list = "\n".join(f"/{action}" for action in ACTIONS.keys()).replace("_", "\_")
         await update.message.reply_text(
-            f"*Grandma's TV Controller*\\n\\n"
-            f"Available commands:\\n/wake\\n{action_list}\\n\\n"
+            f"*Grandma's TV Controller*\n\n"
+            f"Available commands:\n/turn\_on\n/turn\_off\n{action_list}\n\n"
             f"Tap a command to control the TV!",
             parse_mode="Markdown",
         )
-
-    async def wake_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle the /wake command - wake up the TV via Wake-on-LAN.
-
-        Args:
-            update: Telegram update object.
-            context: Callback context.
-        """
-        if not update.effective_chat or not update.message:
-            return
-
-        chat_id = update.effective_chat.id
-
-        if not self._is_authorized(chat_id):
-            await update.message.reply_text(
-                "You are not authorized to use this bot.\nContact the administrator to request access."
-            )
-            return
-
-        logger.info(f"Waking TV for chat {chat_id}")
-
-        status_msg = await update.message.reply_text("Sending Wake-on-LAN to TV...")
-
-        try:
-            mac = self.cfg_data.get("mac", "")
-            ip = self.cfg_data.get("ip", "")
-
-            await WakeOnLanService.wake_device(mac, ip)
-            await status_msg.edit_text("Wake-on-LAN sent! TV should be waking up.")
-        except Exception as e:
-            logger.exception("Error sending Wake-on-LAN")
-            await status_msg.edit_text(f"Error: {e}")
 
     async def action_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE, action_name: str) -> None:
         """Handle an action command.
@@ -206,7 +174,8 @@ class TelegramBotService:
         """
         commands = [
             BotCommand("start", "Show available actions"),
-            BotCommand("wake", "Wake up the TV"),
+            BotCommand("turn_on", "Wake up the TV"),
+            BotCommand("turn_off", "Turn off the TV"),
         ]
         commands.extend(BotCommand(action, f"Execute {action} on TV") for action in ACTIONS.keys())
         await app.bot.set_my_commands(commands)
@@ -224,9 +193,15 @@ class TelegramBotService:
         # Add /start handler
         self.application.add_handler(CommandHandler("start", self.start_command))
 
-        # Add /wake handler
-        self.application.add_handler(CommandHandler("wake", self.wake_command))
-        logger.info("Registered command: /wake")
+        # Add /turn_on handler -> maps to "turn_on" action in core
+        wake_handler = self._create_action_handler("turn_on")
+        self.application.add_handler(CommandHandler("turn_on", wake_handler))
+        logger.info("Registered command: /turn_on")
+
+        # Add /turn_off handler
+        off_handler = self._create_action_handler("turn_off")
+        self.application.add_handler(CommandHandler("turn_off", off_handler))
+        logger.info("Registered command: /turn_off")
 
         # Add handler for each action
         for action_name in ACTIONS.keys():

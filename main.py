@@ -71,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument("--action", type=str, help=f"Run action (auto-wakes if TV is off): {', '.join(ACTIONS.keys())}")
     parser.add_argument("--bot", action="store_true", help="Run as Telegram bot")
     parser.add_argument("--web", action="store_true", help="Run as Web Interface")
+    parser.add_argument("--off", action="store_true", help="Turn off the TV")
 
     args = parser.parse_args()
 
@@ -78,12 +79,14 @@ if __name__ == "__main__":
         # Note: simplistic handling.
         # If user passes --bot and --web, we currently only run one because run_bot/run_web block.
         # To run parallel, we'd need a more complex runner.
-        # For now, priority: Web > Bot > Action > Wake
+        # For now, priority: Web > Bot > Off > Action > Wake
 
         if args.web:
             run_web()
         elif args.bot:
             run_bot()
+        elif args.off:
+            asyncio.run(main(action="turn_off"))
         elif args.action:
             asyncio.run(main(action=args.action))
         else:
