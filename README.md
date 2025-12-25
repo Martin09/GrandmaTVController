@@ -28,6 +28,14 @@ cp config.yml.example config.yml
 
 ## Usage
 
+### Firewall Setup
+
+If you cannot access the web interface from another device, you likely need to allow port 8080 through the Windows Firewall. Run this command in a PowerShell **Administrator** terminal:
+
+```powershell
+New-NetFirewallRule -DisplayName "GrandmaTV Web" -Direction Inbound -LocalPort 8080 -Protocol TCP -Action Allow
+```
+
 ### Run an action
 
 ```sh
@@ -60,6 +68,18 @@ uv run main.py --bot
 4. Add authorized chat IDs to `telegram.allowed_chat_ids` in `config.yml`
 
 Bot commands: `/wake`, `/channel_1`, `/channel_2`, etc.
+
+### Web Interface Mode
+
+Run a minimalist web interface with large buttons:
+
+```sh
+uv run main.py --web
+```
+
+- Accessible at `http://localhost:8080`.
+- Buttons are configured in `config.yml` under the `web` section.
+- You can customize labels, actions, and colors (e.g., `#E63946`).
 
 ## Notes
 

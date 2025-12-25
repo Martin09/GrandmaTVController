@@ -1,13 +1,19 @@
-# Example configuration for Grandma's TV Controller
-# Copy this file to `config.yml` and update values for your TV.
+ip: "192.168.1.100"
+mac: "AA:BB:CC:DD:EE:FF"
+# client_key: "WILL_BE_FILLED_AUTOMATICALLY"
 
-ip: 192.168.178.50
-mac: "12:34:56:78:90:AB"
-
-# Client key for pairing (will be automatically updated after first run)
-client_key: null
-
-# Telegram Bot Configuration
 telegram:
   bot_token: "YOUR_BOT_TOKEN_HERE"
-  allowed_chat_ids: []  # List of allowed chat IDs; unauthorized requests are logged
+  allowed_chat_ids:
+    - 123456789
+
+web:
+  port: 8080
+  host: "0.0.0.0"
+  buttons:
+    - label: "Channel 1"
+      action: "channel_1"
+      color: "#E63946" # Red
+    - label: "Channel 2"
+      action: "channel_2"
+      color: "#457B9D" # Blue

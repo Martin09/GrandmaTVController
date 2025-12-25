@@ -158,15 +158,15 @@ class TVController:
 
         for i, (action_type, value, delay) in enumerate(self.config.sequence, 1):
             if action_type == "APP":
-                logger.info(f"[{i}] Launching App: {value}")
+                logger.debug(f"[{i}] Launching App: {value}")
                 await self.client.launch_app(value)
 
             elif action_type == "BTN":
-                logger.info(f"[{i}] Pressing Button: {value}")
+                logger.debug(f"[{i}] Pressing Button: {value}")
                 await self.client.button(value)
 
             if delay > 0:
-                logger.info(f"    ...waiting {delay}s")
+                logger.debug(f"    ...waiting {delay}s")
                 await asyncio.sleep(delay)
 
         logger.info("Sequence complete.")

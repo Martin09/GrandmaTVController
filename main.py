@@ -57,14 +57,32 @@ def run_bot() -> None:
     bot.run()
 
 
+def run_web() -> None:
+    """Run the Web Server (manages its own loop)."""
+    from web_server import run_web_server
+
+    # We could read port from config here if we wanted to pass it explicitly,
+    # but web_server handles config loading too.
+    run_web_server()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Grandma's TV Controller")
     parser.add_argument("--action", type=str, help=f"Run action (auto-wakes if TV is off): {', '.join(ACTIONS.keys())}")
     parser.add_argument("--bot", action="store_true", help="Run as Telegram bot")
+    parser.add_argument("--web", action="store_true", help="Run as Web Interface")
+
     args = parser.parse_args()
 
     try:
-        if args.bot:
+        # Note: simplistic handling.
+        # If user passes --bot and --web, we currently only run one because run_bot/run_web block.
+        # To run parallel, we'd need a more complex runner.
+        # For now, priority: Web > Bot > Action > Wake
+
+        if args.web:
+            run_web()
+        elif args.bot:
             run_bot()
         elif args.action:
             asyncio.run(main(action=args.action))
