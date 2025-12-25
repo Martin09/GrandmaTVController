@@ -195,6 +195,13 @@ async def handle_action(request: web.Request) -> web.Response:
             return web.json_response({"status": "error", "error": str(e)}, status=500)
 
 
+async def _setup_exception_handler(app: web.Application):
+    """Install custom exception handler on the running event loop."""
+    if sys.platform == "win32":
+        loop = asyncio.get_running_loop()
+        loop.set_exception_handler(_silence_connection_reset_errors)
+
+
 def create_app() -> web.Application:
     # Load config
     try:
@@ -206,6 +213,9 @@ def create_app() -> web.Application:
     app = web.Application()
     app["config"] = config
 
+    # Install exception handler on startup (when loop is running)
+    app.on_startup.append(_setup_exception_handler)
+
     app.router.add_get("/", handle_index)
     app.router.add_post("/api/action/{name}", handle_action)
 
@@ -214,12 +224,6 @@ def create_app() -> web.Application:
 
 def run_web_server():
     logging.basicConfig(level=logging.INFO)
-
-    # Suppress harmless Windows proactor errors (ConnectionResetError)
-    if sys.platform == "win32":
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.set_exception_handler(_silence_connection_reset_errors)
 
     app = create_app()
 
