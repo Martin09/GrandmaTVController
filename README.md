@@ -28,13 +28,23 @@ cp config.yml.example config.yml
 
 ## Usage
 
-Run the controller with a chosen macro:
+### Run an action
 
 ```sh
 uv run main.py --action channel_1
 ```
 
+If the TV is off, it will automatically be woken via Wake-on-LAN and the action will be retried.
+
 Available actions: `channel_1`, `channel_2` (see `main.py` for details).
+
+### Wake the TV (debugging)
+
+```sh
+uv run main.py --wake
+```
+
+This only sends a Wake-on-LAN packet without running any action.
 
 ### Telegram Bot Mode
 
@@ -48,6 +58,8 @@ uv run main.py --bot
 2. Add your bot token to `config.yml` under `telegram.bot_token`
 3. Message your bot, it will log unauthorized chat IDs for you to add
 4. Add authorized chat IDs to `telegram.allowed_chat_ids` in `config.yml`
+
+Bot commands: `/wake`, `/channel_1`, `/channel_2`, etc.
 
 ## Notes
 

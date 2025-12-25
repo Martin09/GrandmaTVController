@@ -152,14 +152,16 @@ class TVController:
 # --- Main Entry Point ---
 
 
-async def main(action: str):
-    sequence = ACTIONS.get(action)
-    if not sequence:
-        print(f"Error: Action '{action}' not found.")
-        print(f"Available actions: {', '.join(ACTIONS.keys())}")
-        sys.exit(1)
+async def main(action: str | None = None) -> None:
+    """Main entry point for TV control.
 
-    # Load TV connection config from YAML. Prefer `config.yml`, fall back to# `config.yml.example`
+    Args:
+        action: The action to execute (e.g., 'channel_1'). Auto-wakes TV if connection fails.
+                If None, only wakes the TV (for debugging).
+    """
+    from aiohttp.client_exceptions import WSMessageTypeError
+
+    # Load TV connection config from YAML. Prefer `config.yml`, fall back to `config.yml.example`
     cfg_path = Path("config.yml")
     example_path = Path("config.yml.example")
     if cfg_path.exists():
@@ -176,14 +178,35 @@ async def main(action: str):
     mac = cfg_data.get("mac") or ""
     client_key = cfg_data.get("client_key")
 
+    # Wake-only mode (no action specified)
+    if not action:
+        if not mac:
+            logger.error("MAC address not configured in config.yml")
+            sys.exit(1)
+        await WakeOnLanService.wake_device(mac, ip)
+        return
+
+    # Run action with auto-retry on connection failure
+    sequence = ACTIONS.get(action)
+    if not sequence:
+        print(f"Error: Action '{action}' not found.")
+        print(f"Available actions: {', '.join(ACTIONS.keys())}")
+        sys.exit(1)
+
     config = TVConfig(ip=ip, mac=mac, client_key=client_key, sequence=sequence)
-
-    # # 1. Wake TV
-    # await WakeOnLanService.wake_device(config.mac, config.ip) # FIXME: Not working
-
-    # 2. Run Controller
     controller = TVController(config)
-    await controller.run_sequence()
+
+    try:
+        await controller.run_sequence()
+    except WSMessageTypeError:
+        logger.warning("TV appears to be off, attempting Wake-on-LAN...")
+        if not mac:
+            logger.error("MAC address not configured for Wake-on-LAN retry.")
+            sys.exit(1)
+        await WakeOnLanService.wake_device(mac, ip)
+        logger.info(f"Retrying action '{action}' after wake...")
+        controller = TVController(config)
+        await controller.run_sequence()
 
 
 def run_bot() -> None:
@@ -202,14 +225,19 @@ def run_bot() -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Grandma's TV Controller")
-    parser.add_argument("--action", type=str, default="channel_1", help=f"Choose action: {', '.join(ACTIONS.keys())}")
+    parser.add_argument("--action", type=str, help=f"Run action (auto-wakes if TV is off): {', '.join(ACTIONS.keys())}")
     parser.add_argument("--bot", action="store_true", help="Run as Telegram bot")
+    parser.add_argument("--wake", action="store_true", help="Wake up the TV via Wake-on-LAN only (for debugging)")
     args = parser.parse_args()
 
     try:
         if args.bot:
             run_bot()
+        elif args.wake:
+            asyncio.run(main())
+        elif args.action:
+            asyncio.run(main(action=args.action))
         else:
-            asyncio.run(main(args.action))
+            parser.print_help()
     except KeyboardInterrupt:
         pass
