@@ -8,8 +8,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from telegram import BotCommand, Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import BotCommand, KeyboardButton, ReplyKeyboardMarkup, Update
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 # Import from core module
 from core import ACTIONS, TVController
@@ -93,6 +93,25 @@ class TelegramBotService:
 
         return True
 
+    def _build_main_keyboard(self) -> ReplyKeyboardMarkup:
+        """Build the main 2x2 button keyboard.
+
+        Returns:
+            ReplyKeyboardMarkup with action buttons.
+        """
+        # Build 2x2 grid layout
+        keyboard = [
+            [
+                KeyboardButton("Turn On"),
+                KeyboardButton("Turn Off"),
+            ],
+            [
+                KeyboardButton("Channel 1"),
+                KeyboardButton("Channel 2"),
+            ],
+        ]
+        return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle the /start command - show available actions.
 
@@ -111,12 +130,10 @@ class TelegramBotService:
             )
             return
 
-        action_list = "\n".join(f"/{action}" for action in ACTIONS.keys()).replace("_", "\_")
         await update.message.reply_text(
-            f"*Grandma's TV Controller*\n\n"
-            f"Available commands:\n/turn\_on\n/turn\_off\n{action_list}\n\n"
-            f"Tap a command to control the TV!",
+            "*Grandma's TV Controller*\n\nThe buttons below are now your remote control.",
             parse_mode="Markdown",
+            reply_markup=self._build_main_keyboard(),
         )
 
     async def action_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE, action_name: str) -> None:
@@ -150,6 +167,54 @@ class TelegramBotService:
         except Exception as e:
             logger.exception(f"Error executing action '{action_name}'")
             await status_msg.edit_text(f"Error executing '{action_name}': {e}")
+
+    async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle text messages (button presses).
+
+        Args:
+            update: Telegram update object.
+            context: Callback context.
+        """
+        if not update.effective_chat or not update.message or not update.message.text:
+            return
+
+        chat_id = update.effective_chat.id
+
+        if not self._is_authorized(chat_id):
+            await update.message.reply_text(
+                "You are not authorized to use this bot.\nContact the administrator to request access."
+            )
+            return
+
+        text = update.message.text
+        action_name = None
+
+        # Map button text to action names
+        if text == "Turn On":
+            action_name = "turn_on"
+        elif text == "Turn Off":
+            action_name = "turn_off"
+        elif text == "Channel 1":
+            action_name = "channel_1"
+        elif text == "Channel 2":
+            action_name = "channel_2"
+        else:
+            # Check if it matches any other configured actions directly (case-insensitive?)
+            # For now, if it's not a known button, ignore or generic reply
+            return
+
+        logger.info(f"Button pressed: '{text}' -> '{action_name}' by chat {chat_id}")
+
+        # Send feedback
+        status_msg = await update.message.reply_text(f"Executing '{text}'...")
+
+        # Execute the action
+        try:
+            result = await TVController.execute_action_with_retry(action_name, self.cfg_data)
+            await status_msg.edit_text(result)
+        except Exception as e:
+            logger.exception(f"Error executing action '{action_name}'")
+            await status_msg.edit_text(f"Error executing '{text}': {e}")
 
     def _create_action_handler(self, action_name: str):
         """Create a command handler for a specific action.
@@ -192,6 +257,10 @@ class TelegramBotService:
 
         # Add /start handler
         self.application.add_handler(CommandHandler("start", self.start_command))
+
+        # Add message handler for text buttons
+        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.message_handler))
+        logger.info("Registered message handler for text buttons")
 
         # Add /turn_on handler -> maps to "turn_on" action in core
         wake_handler = self._create_action_handler("turn_on")
