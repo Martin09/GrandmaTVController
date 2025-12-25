@@ -41,10 +41,10 @@ Available actions: `channel_1`, `channel_2` (see `main.py` for details).
 ### Wake the TV (debugging)
 
 ```sh
-uv run main.py --wake
+uv run main.py
 ```
 
-This only sends a Wake-on-LAN packet without running any action.
+Running without arguments only sends a Wake-on-LAN packet without running any action.
 
 ### Telegram Bot Mode
 
