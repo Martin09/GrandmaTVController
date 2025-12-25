@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import jinja2
@@ -6,6 +7,9 @@ from aiohttp import web
 from core import TVController, load_config
 
 logger = logging.getLogger("GrandmaTV.Web")
+
+# Lock to prevent concurrent TV commands - only one action at a time
+_action_lock = asyncio.Lock()
 
 # HTML Template
 INDEX_TEMPLATE = """
@@ -152,16 +156,25 @@ async def handle_action(request: web.Request) -> web.Response:
     action_name = request.match_info["name"]
     config = request.app["config"]
 
+    # Check if another action is already running
+    if _action_lock.locked():
+        logger.warning(f"Ignoring action '{action_name}' - another command is in progress")
+        return web.json_response(
+            {"status": "busy", "error": "Another command is already running, please wait."},
+            status=429,
+        )
+
     logger.info(f"Web request: Execute action '{action_name}'")
 
-    try:
-        msg = await TVController.execute_action_with_retry(action_name, config)
-        return web.json_response({"status": "ok", "message": msg})
-    except ValueError as e:
-        return web.json_response({"status": "error", "error": str(e)}, status=400)
-    except Exception as e:
-        logger.exception("Web Action Failed")
-        return web.json_response({"status": "error", "error": str(e)}, status=500)
+    async with _action_lock:
+        try:
+            msg = await TVController.execute_action_with_retry(action_name, config)
+            return web.json_response({"status": "ok", "message": msg})
+        except ValueError as e:
+            return web.json_response({"status": "error", "error": str(e)}, status=400)
+        except Exception as e:
+            logger.exception("Web Action Failed")
+            return web.json_response({"status": "error", "error": str(e)}, status=500)
 
 
 def create_app() -> web.Application:
