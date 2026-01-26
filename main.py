@@ -1,7 +1,9 @@
 import argparse
 import asyncio
 import logging
+import os
 import sys
+from pathlib import Path
 
 from core import ACTIONS, TVController, WakeOnLanService, load_config
 
@@ -67,6 +69,9 @@ def run_web() -> None:
 
 
 if __name__ == "__main__":
+    # Save process ID to file
+    Path("app.pid").write_text(str(os.getpid()), encoding="utf-8")
+
     parser = argparse.ArgumentParser(description="Grandma's TV Controller")
     parser.add_argument("--action", type=str, help=f"Run action (auto-wakes if TV is off): {', '.join(ACTIONS.keys())}")
     parser.add_argument("--bot", action="store_true", help="Run as Telegram bot")
